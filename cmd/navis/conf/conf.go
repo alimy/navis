@@ -5,10 +5,8 @@
 package conf
 
 import (
-	_ "embed"
-	"log"
-
 	"github.com/alimy/cfg"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -16,22 +14,14 @@ var (
 	ServerConf *serverConf
 )
 
-type appConf struct {
-	RunMode string
-}
-
-type serverConf struct {
-	Addr string
-}
-
 func setupConf(suite []string, noDefault bool) error {
-	setting, err := newSetting()
+	vp, err := newViper()
 	if err != nil {
 		return err
 	}
 
 	// initialize features configure
-	ss, kv := setting.featuresInfoFrom("Features")
+	ss, kv := featuresFrom(vp, "Features")
 	cfg.Initial(ss, kv)
 	if len(suite) > 0 {
 		cfg.Use(suite, noDefault)
@@ -41,8 +31,11 @@ func setupConf(suite []string, noDefault bool) error {
 		"App":    &AppConf,
 		"Server": &ServerConf,
 	}
-	if err = setting.Unmarshal(objects); err != nil {
-		return err
+	for k, v := range objects {
+		err := vp.UnmarshalKey(k, v)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -50,6 +43,6 @@ func setupConf(suite []string, noDefault bool) error {
 func Initial(suite []string, noDefault bool) {
 	err := setupConf(suite, noDefault)
 	if err != nil {
-		log.Fatalf("configure setup err: %v", err)
+		logrus.Fatalf("configure setup err: %v", err)
 	}
 }

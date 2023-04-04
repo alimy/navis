@@ -8,36 +8,23 @@ import (
 	"bytes"
 	_ "embed"
 
-	"github.com/ory/viper"
+	"github.com/cockroachdb/errors"
+	"github.com/spf13/viper"
 )
 
 //go:embed app.yaml
 var fileBytes []byte
 
-type setting struct {
-	vp *viper.Viper
+type appConf struct {
+	RunMode string
 }
 
-func (s *setting) ReadSection(k string, v any) error {
-	err := s.vp.UnmarshalKey(k, v)
-	if err != nil {
-		return err
-	}
-	return nil
+type serverConf struct {
+	Addr string
 }
 
-func (s *setting) Unmarshal(objects map[string]any) error {
-	for k, v := range objects {
-		err := s.vp.UnmarshalKey(k, v)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *setting) featuresInfoFrom(k string) (map[string][]string, map[string]string) {
-	sub := s.vp.Sub(k)
+func featuresFrom(vp *viper.Viper, k string) (map[string][]string, map[string]string) {
+	sub := vp.Sub(k)
 	keys := sub.AllKeys()
 
 	suites := make(map[string][]string)
@@ -54,7 +41,7 @@ func (s *setting) featuresInfoFrom(k string) (map[string][]string, map[string]st
 	return suites, kv
 }
 
-func newSetting() (*setting, error) {
+func newViper() (*viper.Viper, error) {
 	vp := viper.New()
 	vp.SetConfigName("app")
 	vp.AddConfigPath(".")
@@ -62,10 +49,10 @@ func newSetting() (*setting, error) {
 	vp.SetConfigType("yaml")
 	err := vp.ReadConfig(bytes.NewReader(fileBytes))
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "create viper")
 	}
 	if err = vp.MergeInConfig(); err != nil {
 		return nil, err
 	}
-	return &setting{vp}, nil
+	return vp, nil
 }
