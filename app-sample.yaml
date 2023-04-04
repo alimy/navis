@@ -1,0 +1,6 @@
+App: # APP基础设置项
+  RunMode: debug
+Features:
+  Default: []
+Server: # Web服务
+  Addr: 0.0.0.0
